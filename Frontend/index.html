@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emergency Evacuation Route Simulation & Risk Analysis</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <!-- Custom Theme & Print Styles -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/print.css" media="print">
+</head>
+<body>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay">
+        <div class="spinner-tactical"></div>
+        <div id="loading-message" class="text-light fw-semibold small">Initializing simulation...</div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="position-fixed top-0 end-0 p-3" style="z-index: 10500;"></div>
+
+    <div id="app-layout">
+        <!-- ==============================================================================
+             SIDEBAR NAVIGATION
+             ============================================================================== -->
+        <aside id="sidebar">
+            <div class="brand-section">
+                <div class="brand-logo-icon">
+                    <i class="bi bi-shield-fill-exclamation"></i>
+                </div>
+                <div>
+                    <div class="brand-title">EVAC-SIM PRO</div>
+                    <div class="brand-subtitle">Tactical Risk System</div>
+                </div>
+            </div>
+
+            <div class="sidebar-nav">
+                <div class="nav-section-label">Command Center</div>
+                <a class="sidebar-item active" data-view="home">
+                    <i class="bi bi-house-door-fill"></i>
+                    <span>Home Overview</span>
+                </a>
+                <a class="sidebar-item" data-view="dashboard">
+                    <i class="bi bi-speedometer2"></i>
+                    <span>Live Dashboard</span>
+                </a>
+                <a class="sidebar-item" data-view="floorplan">
+                    <i class="bi bi-diagram-3-fill"></i>
+                    <span>Building Floor Plan</span>
+                </a>
+
+                <div class="nav-section-label">Simulation Operations</div>
+                <a class="sidebar-item" data-view="scenarios">
+                    <i class="bi bi-sliders2-vertical"></i>
+                    <span>Scenario Config</span>
+                </a>
+                <a class="sidebar-item" data-view="simulation">
+                    <i class="bi bi-play-circle-fill"></i>
+                    <span>Evacuation Simulator</span>
+                </a>
+                <a class="sidebar-item" data-view="routes">
+                    <i class="bi bi-signpost-split-fill"></i>
+                    <span>Route Analysis</span>
+                </a>
+
+                <div class="nav-section-label">Risk & Intelligence</div>
+                <a class="sidebar-item" data-view="risk">
+                    <i class="bi bi-activity"></i>
+                    <span>Risk Analysis</span>
+                </a>
+                <a class="sidebar-item" data-view="comparison">
+                    <i class="bi bi-bar-chart-steps"></i>
+                    <span>Scenario Comparison</span>
+                </a>
+                <a class="sidebar-item" data-view="reports">
+                    <i class="bi bi-file-earmark-pdf-fill"></i>
+                    <span>Simulation Reports</span>
+                </a>
+
+                <div class="nav-section-label">Access Control</div>
+                <a class="sidebar-item" data-view="login">
+                    <i class="bi bi-person-badge-fill"></i>
+                    <span>Operator Portal</span>
+                </a>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fs-5">👨‍✈️</span>
+                    <div class="small">
+                        <div id="current-user-name" class="fw-bold text-light">Commander</div>
+                        <div class="text-muted" style="font-size: 0.7rem;">Active Authority</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ==============================================================================
+             MAIN VIEWPORT
+             ============================================================================== -->
+        <main id="main-content">
+            <!-- Top Navigation Bar -->
+            <header id="top-navbar">
+                <div class="d-flex align-items-center gap-3">
+                    <button id="sidebar-toggle-btn" class="btn btn-sm btn-outline-secondary d-lg-none">
+                        <i class="bi bi-list fs-5"></i>
+                    </button>
+                    <div class="d-none d-sm-flex align-items-center gap-2">
+                        <span class="badge bg-danger pulse-dot"><i class="bi bi-broadcast me-1"></i> SIM READY</span>
+                        <span class="text-secondary small">|</span>
+                        <span class="text-light small fw-medium">TechnoCenter Complex (Floor 1)</span>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center gap-3">
+                    <!-- Scenario Quick Selector -->
+                    <div class="d-flex align-items-center gap-2">
+                        <label for="top-scenario-select" class="text-secondary small fw-medium text-nowrap d-none d-md-inline">Scenario:</label>
+                        <select id="top-scenario-select" class="form-select form-select-sm bg-dark text-light border-secondary" style="max-width: 280px;"></select>
+                    </div>
+
+                    <button class="btn btn-sm btn-primary d-flex align-items-center gap-1" onclick="App.runSimulation()">
+                        <i class="bi bi-play-fill"></i> <span class="d-none d-sm-inline">Run Sim</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Main Body Views -->
+            <div class="content-body">
+
+                <!-- Global Educational Disclaimer -->
+                <div class="disclaimer-banner">
+                    <i class="bi bi-shield-exclamation"></i>
+                    <div>
+                        <strong>EDUCATIONAL SIMULATION NOTICE:</strong> This application is an educational and analytical research simulation.
+                        All calculated evacuation routes, crowd flow rates, and clearance times are mathematical estimates based on Dijkstra's algorithm and queuing delay approximations.
+                        <strong>They must NOT be used as certified life-safety emergency directives.</strong>
+                    </div>
+                </div>
+
+                <!-- ======================================================================
+                     VIEW 1: HOME PAGE
+                     ====================================================================== -->
+                <div id="view-home" class="view-page">
+                    <div class="row g-4 mb-4">
+                        <div class="col-lg-8">
+                            <div class="tactical-card p-4 h-100">
+                                <div class="badge bg-warning text-dark mb-2 fw-bold">EDUCATIONAL RESEARCH PLATFORM</div>
+                                <h2 class="fw-bold text-white mb-3">Emergency Evacuation Route Simulation & Risk Analysis</h2>
+                                <p class="text-secondary mb-4">
+                                    A professional mathematical modeling platform engineered to simulate building evacuations during fire emergencies,
+                                    structural blockages, and hazardous events. Utilizing <strong>Dijkstra's Shortest Path Algorithm</strong>, <strong>Breadth-First Search (BFS)</strong>,
+                                    and crowd congestion queuing dynamics, this platform models human egress, isolates high-risk bottlenecks, and recommends alternative safe pathways.
+                                </p>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button class="btn btn-tactical primary" onclick="App.navigateTo('dashboard')">
+                                        <i class="bi bi-speedometer2"></i> Open Dashboard
+                                    </button>
+                                    <button class="btn btn-tactical success" onclick="App.navigateTo('simulation')">
+                                        <i class="bi bi-play-circle-fill"></i> Launch Simulation
+                                    </button>
+                                    <button class="btn btn-tactical" onclick="App.navigateTo('floorplan')">
+                                        <i class="bi bi-diagram-3"></i> View Floor Plan
+                                    </button>
+                                    <button class="btn btn-tactical danger" onclick="App.navigateTo('scenarios')">
+                                        <i class="bi bi-sliders"></i> Configure Hazards
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4">
+                            <div class="tactical-card p-4 h-100">
+                                <h5 class="text-white fw-bold mb-3"><i class="bi bi-cpu text-cyan me-2"></i>Algorithmic Engine</h5>
+                                <ul class="list-unstyled text-secondary small mb-0">
+                                    <li class="mb-3 d-flex gap-2">
+                                        <i class="bi bi-check-circle-fill text-success flex-shrink-0 mt-1"></i>
+                                        <div><strong>Dijkstra's Algorithm:</strong> Optimal shortest path routing to available building exits, excluding impassable segments.</div>
+                                    </li>
+                                    <li class="mb-3 d-flex gap-2">
+                                        <i class="bi bi-check-circle-fill text-success flex-shrink-0 mt-1"></i>
+                                        <div><strong>BFS Alternative Discovery:</strong> Rapid multi-path exploration to find alternative exits when corridors are compromised.</div>
+                                    </li>
+                                    <li class="mb-3 d-flex gap-2">
+                                        <i class="bi bi-check-circle-fill text-success flex-shrink-0 mt-1"></i>
+                                        <div><strong>Crowd Queuing Model:</strong> Capacity-constrained flow simulation calculating bottleneck delay times.</div>
+                                    </li>
+                                    <li class="d-flex gap-2">
+                                        <i class="bi bi-check-circle-fill text-success flex-shrink-0 mt-1"></i>
+                                        <div><strong>Risk Indexing:</strong> Real-time categorization into Low, Moderate, and High Bottleneck risks.</div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Navigation Cards Grid -->
+                    <div class="row g-3">
+                        <div class="col-md-4 col-sm-6">
+                            <div class="tactical-card p-3 h-100 cursor-pointer" onclick="App.navigateTo('dashboard')">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="stat-icon bg-primary bg-opacity-25 text-primary fs-3 p-2 rounded">
+                                        <i class="bi bi-speedometer2"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="text-white mb-1">Live Dashboard</h6>
+                                        <small class="text-secondary">Summary metrics, exit statuses, and clearance stats.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                            <div class="tactical-card p-3 h-100 cursor-pointer" onclick="App.navigateTo('floorplan')">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="stat-icon bg-info bg-opacity-25 text-info fs-3 p-2 rounded">
+                                        <i class="bi bi-map-fill"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="text-white mb-1">Interactive Floor Plan</h6>
+                                        <small class="text-secondary">Explore 10 rooms, 8 corridors, and 4 exits in 2D.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                            <div class="tactical-card p-3 h-100 cursor-pointer" onclick="App.navigateTo('simulation')">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="stat-icon bg-success bg-opacity-25 text-success fs-3 p-2 rounded">
+                                        <i class="bi bi-people-fill"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="text-white mb-1">Movement Simulator</h6>
+                                        <small class="text-secondary">Animated evacuee movement particles & bottlenecks.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                            <div class="tactical-card p-3 h-100 cursor-pointer" onclick="App.navigateTo('risk')">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="stat-icon bg-warning bg-opacity-25 text-warning fs-3 p-2 rounded">
+                                        <i class="bi bi-exclamation-triangle-fill"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="text-white mb-1">Risk Analysis</h6>
+                                        <small class="text-secondary">Corridor congestion and exit load distribution charts.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                            <div class="tactical-card p-3 h-100 cursor-pointer" onclick="App.navigateTo('comparison')">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="stat-icon bg-purple bg-opacity-25 text-purple fs-3 p-2 rounded">
+                                        <i class="bi bi-arrow-left-right"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="text-white mb-1">Scenario Comparison</h6>
+                                        <small class="text-secondary">Side-by-side benchmarking of emergency scenarios.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6">
+                            <div class="tactical-card p-3 h-100 cursor-pointer" onclick="App.navigateTo('reports')">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="stat-icon bg-danger bg-opacity-25 text-danger fs-3 p-2 rounded">
+                                        <i class="bi bi-file-earmark-pdf-fill"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="text-white mb-1">Audit Reports</h6>
+                                        <small class="text-secondary">Formal simulation reports with one-click PDF export.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ======================================================================
+                     VIEW 2: LOGIN / ACCESS PORTAL
+                     ====================================================================== -->
+                <div id="view-login" class="view-page" style="display: none;">
+                    <div class="row justify-content-center">
+                        <div class="col-lg-8">
+                            <div class="tactical-card p-4">
+                                <h4 class="text-white fw-bold mb-2"><i class="bi bi-shield-lock-fill text-cyan me-2"></i>Operator Access Portal</h4>
+                                <p class="text-secondary small mb-4">Select an authority profile to access role-specific permissions and simulation controls.</p>
+
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <div class="p-3 border border-secondary rounded bg-dark text-center cursor-pointer hover-card" onclick="App.switchUserRole('COMMANDER', 'Chief Safety Commander', '👨‍✈️')">
+                                            <div class="fs-1 mb-2">👨‍✈️</div>
+                                            <h6 class="text-white fw-bold">Incident Commander</h6>
+                                            <div class="badge bg-danger mb-2">FULL AUTHORITY</div>
+                                            <p class="text-muted small">Real-time simulation execution, hazard blockage management, and scenario creation.</p>
+                                            <button class="btn btn-sm btn-primary w-100">Select Profile</button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="p-3 border border-secondary rounded bg-dark text-center cursor-pointer hover-card" onclick="App.switchUserRole('AUDITOR', 'Senior Safety Auditor', '👩‍💼')">
+                                            <div class="fs-1 mb-2">👩‍💼</div>
+                                            <h6 class="text-white fw-bold">Facility Auditor</h6>
+                                            <div class="badge bg-warning text-dark mb-2">ANALYTICS & AUDIT</div>
+                                            <p class="text-muted small">Risk analysis, scenario comparison, bottleneck metrics, and PDF compliance report exporting.</p>
+                                            <button class="btn btn-sm btn-outline-warning w-100">Select Profile</button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="p-3 border border-secondary rounded bg-dark text-center cursor-pointer hover-card" onclick="App.switchUserRole('OPERATOR', 'Floor Operations Warden', '👷‍♂️')">
+                                            <div class="fs-1 mb-2">👷‍♂️</div>
+                                            <h6 class="text-white fw-bold">Floor Warden</h6>
+                                            <div class="badge bg-info text-dark mb-2">MONITORING</div>
+                                            <p class="text-muted small">View-only access for floor plan inspection, routing maps, and occupant headcount tracking.</p>
+                                            <button class="btn btn-sm btn-outline-info w-100">Select Profile</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ======================================================================
+                     VIEW 3: DASHBOARD
+                     ====================================================================== -->
+                <div id="view-dashboard" class="view-page" style="display: none;">
+                    <!-- 8 Key Metrics Widgets -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="stat-box cyan">
+                                <div class="stat-icon"><i class="bi bi-building"></i></div>
+                                <div>
+                                    <div id="dash-stat-rooms" class="stat-number">10</div>
+                                    <div class="stat-label">Total Rooms</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="stat-box purple">
+                                <div class="stat-icon"><i class="bi bi-signpost-split"></i></div>
+                                <div>
+                                    <div id="dash-stat-corridors" class="stat-number">8</div>
+                                    <div class="stat-label">Corridors</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="stat-box safe">
+                                <div class="stat-icon"><i class="bi bi-door-open-fill"></i></div>
+                                <div>
+                                    <div id="dash-stat-exits" class="stat-number">4</div>
+                                    <div class="stat-label">Total Exits</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="stat-box warning">
+                                <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+                                <div>
+                                    <div id="dash-stat-occupants" class="stat-number">144</div>
+                                    <div class="stat-label">Estimated Occupants</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="stat-box danger">
+                                <div class="stat-icon"><i class="bi bi-slash-circle-fill"></i></div>
+                                <div>
+                                    <div id="dash-stat-blocked" class="stat-number">0</div>
+                                    <div class="stat-label">Blocked Passages</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="stat-box warning">
+                                <div class="stat-icon"><i class="bi bi-stopwatch-fill"></i></div>
+                                <div>
+                                    <div id="dash-stat-time" class="stat-number">--</div>
+                                    <div class="stat-label">Est. Evac Time</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="stat-box safe">
+                                <div class="stat-icon"><i class="bi bi-shield-check"></i></div>
+                                <div>
+                                    <div id="dash-stat-safe" class="stat-number">--</div>
+                                    <div class="stat-label">Safely Evacuated</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="stat-box danger">
+                                <div class="stat-icon"><i class="bi bi-activity"></i></div>
+                                <div>
+                                    <div id="dash-stat-risk" class="stat-number">--</div>
+                                    <div class="stat-label">Overall Risk Index</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dashboard Main Grid -->
+                    <div class="row g-4">
+                        <div class="col-lg-8">
+                            <div class="tactical-card h-100">
+                                <div class="card-header-tactical">
+                                    <div class="card-title-tactical">
+                                        <i class="bi bi-diagram-3-fill text-cyan"></i> Real-time Evacuation Overview
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-cyan" onclick="App.navigateTo('floorplan')">
+                                        <i class="bi bi-arrows-fullscreen"></i> Expand Floor Plan
+                                    </button>
+                                </div>
+                                <div class="card-body-tactical p-0">
+                                    <div class="p-3 text-secondary small">
+                                        Floor plan simulation overview for active scenario. Click any room or corridor below to inspect:
+                                    </div>
+                                    <div class="canvas-wrapper" style="height: 440px;">
+                                        <canvas id="dashboardPreviewCanvas"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4">
+                            <div class="tactical-card h-100">
+                                <div class="card-header-tactical">
+                                    <div class="card-title-tactical">
+                                        <i class="bi bi-lightning-charge-fill text-warning"></i> Scenario Actions
+                                    </div>
+                                </div>
+                                <div class="card-body-tactical">
+                                    <p class="text-secondary small">Quickly switch conditions or execute a fresh mathematical calculation:</p>
+                                    <div class="d-grid gap-2 mb-4">
+                                        <button class="btn btn-tactical primary" onclick="App.runSimulation()">
+                                            <i class="bi bi-play-circle-fill"></i> Run Dijkstra Calculation
+                                        </button>
+                                        <button class="btn btn-tactical" onclick="App.navigateTo('scenarios')">
+                                            <i class="bi bi-sliders"></i> Modify Hazard Passages
+                                        </button>
+                                        <button class="btn btn-tactical" onclick="App.navigateTo('comparison')">
+                                            <i class="bi bi-bar-chart-steps"></i> Compare Scenarios
+                                        </button>
+                                        <button class="btn btn-tactical" onclick="App.navigateTo('reports')">
+                                            <i class="bi bi-printer"></i> Generate Audit Report
+                                        </button>
+                                    </div>
+
+                                    <h6 class="text-white fw-bold mb-2">Simulation Engine Specifications</h6>
+                                    <div class="p-3 bg-dark rounded border border-secondary small text-secondary">
+                                        <div><strong class="text-light">Algorithm:</strong> Dijkstra + BFS</div>
+                                        <div><strong class="text-light">Base Speed:</strong> 1.2 m/s</div>
+                                        <div><strong class="text-light">Flow Rate:</strong> 1.3 persons/m/s</div>
+                                        <div><strong class="text-light">Target Exits:</strong> EX-1, EX-2, EX-3, EX-4</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ======================================================================
+                     VIEW 4: BUILDING FLOOR PLAN
+                     ====================================================================== -->
+                <div id="view-floorplan" class="view-page" style="display: none;">
+                    <div class="row g-3">
+                        <div class="col-lg-9">
+                            <div class="tactical-card">
+                                <div class="card-header-tactical">
+                                    <div class="card-title-tactical">
+                                        <i class="bi bi-diagram-3-fill text-cyan"></i> Interactive Building Floor Plan (2D Viewport)
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="App.floorPlanViewer.fitToScreen()">
+                                            <i class="bi bi-aspect-ratio"></i> Fit
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="App.floorPlanViewer.zoomIn()">
+                                            <i class="bi bi-zoom-in"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="App.floorPlanViewer.zoomOut()">
+                                            <i class="bi bi-zoom-out"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body-tactical p-0 position-relative">
+                                    <div class="canvas-wrapper">
+                                        <canvas id="floorplanCanvas"></canvas>
+
+                                        <!-- Canvas Legend Overlay -->
+                                        <div class="canvas-legend">
+                                            <div class="legend-item"><span class="legend-color-dot" style="background: #0f172a; border: 1px solid #334155;"></span> Rooms</div>
+                                            <div class="legend-item"><span class="legend-color-dot" style="background: #1e293b; border: 1px solid #475569;"></span> Corridors</div>
+                                            <div class="legend-item"><span class="legend-color-dot" style="background: #10b981;"></span> Safe Exits</div>
+                                            <div class="legend-item"><span class="legend-color-dot" style="background: #3b82f6;"></span> Main Entrance</div>
+                                            <div class="legend-item"><span class="legend-color-dot" style="background: #ef4444;"></span> Blocked Hazard</div>
+                                            <div class="legend-item"><span class="legend-color-dot" style="background: #06b6d4;"></span> Recommended Route</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Room Details Inspector -->
+                        <div class="col-lg-3">
+                            <div id="room-inspector-card" class="tactical-card p-3" style="display: none;">
+                                <h6 class="text-white fw-bold mb-3 d-flex align-items-center gap-2">
+                                    <i class="bi bi-info-circle-fill text-info"></i> Room Inspector
+                                </h6>
+                                <div class="p-2 bg-dark rounded border border-secondary mb-3 small">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="text-secondary">Code:</span>
+                                        <strong id="inspect-room-code" class="text-cyan">--</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="text-secondary">Name:</span>
+                                        <strong id="inspect-room-name" class="text-light">--</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="text-secondary">Type:</span>
+                                        <span id="inspect-room-type" class="badge bg-secondary">--</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="text-secondary">Occupants:</span>
+                                        <strong id="inspect-room-occupants" class="text-warning">--</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-secondary">Max Capacity:</span>
+                                        <span id="inspect-room-capacity" class="text-light">--</span>
+                                    </div>
+                                </div>
+
+                                <h6 class="text-white fw-bold mb-2 small">Assigned Evacuation Path</h6>
+                                <div class="p-2 bg-dark rounded border border-secondary mb-3 small">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="text-secondary">Nearest Exit:</span>
+                                        <strong id="inspect-room-exit" class="text-success">--</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="text-secondary">Distance:</span>
+                                        <span id="inspect-room-distance" class="text-light">--</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="text-secondary">Est. Time:</span>
+                                        <strong id="inspect-room-time" class="text-warning">--</strong>
+                                    </div>
+                                    <div class="mt-2 text-secondary" style="font-size: 0.72rem;">Route Trajectory:</div>
+                                    <div id="inspect-room-path" class="font-monospace text-cyan small text-break">--</div>
+                                </div>
+                            </div>
+
+                            <div class="tactical-card p-3 mt-3">
+                                <h6 class="text-white fw-bold mb-2 small"><i class="bi bi-mouse me-1 text-cyan"></i> Navigation Guide</h6>
+                                <ul class="list-unstyled text-secondary small mb-0">
+                                    <li class="mb-2"><i class="bi bi-arrows-move me-1"></i> <strong>Click & Drag:</strong> Pan across the floor layout.</li>
+                                    <li class="mb-2"><i class="bi bi-mouse2 me-1"></i> <strong>Scroll Wheel:</strong> Zoom in and out.</li>
+                                    <li class="mb-2"><i class="bi bi-cursor-fill me-1"></i> <strong>Click Room:</strong> Inspect room details & routing path.</li>
+                                    <li><i class="bi bi-shield-x me-1"></i> <strong>Click Corridor/Exit:</strong> Toggle blockage in scenario mode.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ======================================================================
+                     VIEW 5: SCENARIO CONFIGURATION
+                     ====================================================================== -->
+                <div id="view-scenarios" class="view-page" style="display: none;">
+                    <div class="tactical-card p-4 mb-4">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                            <div>
+                                <h4 class="text-white fw-bold mb-1"><i class="bi bi-sliders text-cyan me-2"></i>Emergency Scenario Configuration</h4>
+                                <p class="text-secondary small mb-0">Select an existing scenario or configure passage blockages, corridor capacities, and crowd densities.</p>
+                            </div>
+                            <button class="btn btn-tactical primary" data-bs-toggle="modal" data-bs-target="#createScenarioModal">
+                                <i class="bi bi-plus-circle me-1"></i> Create Custom Scenario
+                            </button>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="text-secondary small fw-medium">Active Scenario Preset:</label>
+                                <select id="config-scenario-select" class="form-select bg-dark text-light border-secondary" onchange="App.selectScenario(this.value)"></select>
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end gap-2">
+                                <button class="btn btn-outline-cyan flex-grow-1" onclick="App.runSimulation()">
+                                    <i class="bi bi-play-circle me-1"></i> Simulate Active Scenario
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Corridors and Exits Interactive Toggles -->
+                    <div class="row g-4">
+                        <div class="col-lg-7">
+                            <div class="tactical-card h-100">
+                                <div class="card-header-tactical">
+                                    <div class="card-title-tactical">
+                                        <i class="bi bi-signpost-split text-cyan"></i> Corridor Blockage Controls
+                                    </div>
+                                </div>
+                                <div class="card-body-tactical p-0">
+                                    <div class="table-responsive">
+                                        <table class="table-tactical">
+                                            <thead>
+                                                <tr>
+                                                    <th>Code</th>
+                                                    <th>Corridor Name</th>
+                                                    <th>Width</th>
+                                                    <th>Max Cap</th>
+                                                    <th>Status</th>
+                                                    <th>Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="config-corridors-tbody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-5">
+                            <div class="tactical-card h-100">
+                                <div class="card-header-tactical">
+                                    <div class="card-title-tactical">
+                                        <i class="bi bi-door-open-fill text-success"></i> Exit Availability Controls
+                                    </div>
+                                </div>
+                                <div class="card-body-tactical p-0">
+                                    <div class="table-responsive">
+                                        <table class="table-tactical">
+                                            <thead>
+                                                <tr>
+                                                    <th>Code</th>
+                                                    <th>Exit Name</th>
+                                                    <th>Type</th>
+                                                    <th>Flow Rate</th>
+                                                    <th>Status</th>
+                                                    <th>Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="config-exits-tbody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ======================================================================
+                     VIEW 6: EVACUATION SIMULATION
+                     ====================================================================== -->
+                <div id="view-simulation" class="view-page" style="display: none;">
+                    <div class="tactical-card mb-3">
+                        <div class="card-header-tactical">
+                            <div class="card-title-tactical">
+                                <i class="bi bi-play-circle-fill text-success"></i> Evacuation Movement Simulator
+                            </div>
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="text-secondary small">
+                                    Elapsed Time: <strong id="sim-timer-display" class="text-warning fs-6">0.0s</strong>
+                                </div>
+                                <div class="text-secondary small">
+                                    Evacuated: <strong id="sim-evacuated-display" class="text-success fs-6">0 / 0</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body-tactical p-0">
+                            <!-- Progress Bar -->
+                            <div class="progress" style="height: 4px; border-radius: 0; background-color: #1e293b;">
+                                <div id="sim-progress-bar" class="progress-bar bg-cyan" style="width: 0%;"></div>
+                            </div>
+
+                            <!-- Canvas simulation viewport -->
+                            <div class="canvas-wrapper" style="height: 520px;">
+                                <canvas id="simCanvasHolder"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Playback Controls Bar -->
+                    <div class="sim-controls-bar">
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="btn btn-tactical primary" onclick="App.runSimulation()">
+                                <i class="bi bi-play-fill"></i> Play
+                            </button>
+                            <button class="btn btn-tactical" onclick="App.pauseSimulation()">
+                                <i class="bi bi-pause-fill"></i> Pause
+                            </button>
+                            <button class="btn btn-tactical" onclick="App.stepSimulation()">
+                                <i class="bi bi-skip-forward-fill"></i> Step (+1.5s)
+                            </button>
+                            <button class="btn btn-tactical danger" onclick="App.resetSimulation()">
+                                <i class="bi bi-arrow-counterclockwise"></i> Reset
+                            </button>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-secondary small">Playback Speed:</span>
+                            <button id="btn-speed-0.5x" class="btn btn-sm btn-outline-secondary btn-sim-speed" onclick="App.setSimulationSpeed(0.5)">0.5x</button>
+                            <button id="btn-speed-1x" class="btn btn-sm btn-outline-secondary btn-sim-speed active" onclick="App.setSimulationSpeed(1.0)">1.0x</button>
+                            <button id="btn-speed-2x" class="btn btn-sm btn-outline-secondary btn-sim-speed" onclick="App.setSimulationSpeed(2.0)">2.0x</button>
+                            <button id="btn-speed-5x" class="btn btn-sm btn-outline-secondary btn-sim-speed" onclick="App.setSimulationSpeed(5.0)">5.0x</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ======================================================================
+                     VIEW 7: ROUTE ANALYSIS
+                     ====================================================================== -->
+                <div id="view-routes" class="view-page" style="display: none;">
+                    <div class="tactical-card">
+                        <div class="card-header-tactical">
+                            <div class="card-title-tactical">
+                                <i class="bi bi-signpost-split-fill text-cyan"></i> Calculated Room Evacuation Routes
+                            </div>
+                            <span class="badge bg-primary">Dijkstra Shortest Path Calculations</span>
+                        </div>
+                        <div class="card-body-tactical p-0">
+                            <div class="table-responsive">
+                                <table class="table-tactical">
+                                    <thead>
+                                        <tr>
+                                            <th>Room</th>
+                                            <th>Name</th>
+                                            <th>Occupants</th>
+                                            <th>Assigned Exit</th>
+                                            <th>Calculated Route Trajectory</th>
+                                            <th>Distance</th>
+                                            <th>Est. Time</th>
+                                            <th>Risk Level</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="route-analysis-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ======================================================================
+                     VIEW 8: RISK ANALYSIS
+                     ====================================================================== -->
+                <div id="view-risk" class="view-page" style="display: none;">
+                    <div class="row g-4 mb-4">
+                        <div class="col-lg-6">
+                            <div class="tactical-card h-100 p-3">
+                                <h6 class="text-white fw-bold mb-3"><i class="bi bi-bar-chart-fill text-warning me-2"></i>Corridor Congestion Index</h6>
+                                <div style="height: 280px;">
+                                    <canvas id="corridorCongestionChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="tactical-card h-100 p-3">
+                                <h6 class="text-white fw-bold mb-3"><i class="bi bi-pie-chart-fill text-success me-2"></i>Exit Load Distribution</h6>
+                                <div style="height: 280px;">
+                                    <canvas id="exitUtilizationChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-4">
+                        <div class="col-lg-7">
+                            <div class="tactical-card p-3">
+                                <h6 class="text-white fw-bold mb-3"><i class="bi bi-clock-history text-cyan me-2"></i>Room Clearance Duration Profile</h6>
+                                <div style="height: 300px;">
+                                    <canvas id="roomClearanceChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-5">
+                            <div class="tactical-card p-3 h-100">
+                                <h6 class="text-white fw-bold mb-3"><i class="bi bi-shield-exclamation text-danger me-2"></i>Bottleneck Risk Recommendations</h6>
+                                <ul id="risk-recommendations-list" class="list-group list-group-flush"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ======================================================================
+                     VIEW 9: SCENARIO COMPARISON
+                     ====================================================================== -->
+                <div id="view-comparison" class="view-page" style="display: none;">
+                    <div class="tactical-card p-4 mb-4">
+                        <h4 class="text-white fw-bold mb-2"><i class="bi bi-bar-chart-steps text-cyan me-2"></i>Scenario Comparison & Benchmarking</h4>
+                        <p id="comparison-summary-text" class="text-secondary small mb-3">Loading comparative analysis...</p>
+                        <div class="d-flex flex-wrap gap-3">
+                            <div class="small">Optimal Scenario: <span id="comparison-best-scenario" class="badge bg-success">--</span></div>
+                            <div class="small">Highest Risk Scenario: <span id="comparison-worst-scenario" class="badge bg-danger">--</span></div>
+                        </div>
+                    </div>
+
+                    <div class="tactical-card p-4 mb-4">
+                        <h6 class="text-white fw-bold mb-3">Clearance Time & Congestion Comparison</h6>
+                        <div style="height: 320px;">
+                            <canvas id="scenarioComparisonChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="row g-3" id="scenario-comparison-cards"></div>
+                </div>
+
+                <!-- ======================================================================
+                     VIEW 10: REPORTS
+                     ====================================================================== -->
+                <div id="view-reports" class="view-page" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+                        <h4 class="text-white fw-bold mb-0"><i class="bi bi-file-earmark-pdf-fill text-danger me-2"></i>Simulation Audit Report</h4>
+                        <button class="btn btn-danger" onclick="ReportModule.exportToPdf()">
+                            <i class="bi bi-printer-fill me-1"></i> Print / Export to PDF
+                        </button>
+                    </div>
+
+                    <!-- Printable Container -->
+                    <div class="printable-report tactical-card p-4">
+                        <div class="report-header">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h3 class="report-title text-white fw-bold mb-0">Emergency Evacuation Simulation Audit Report</h3>
+                                    <div class="report-meta text-secondary">Automated Facility Life-Safety Heuristic Assessment</div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="badge bg-secondary mb-1" id="report-id-text">EVAC-REP-000</div>
+                                    <div class="small text-muted" id="report-timestamp">--</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Building & Scenario Metadata -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <div class="p-3 bg-dark rounded border border-secondary small">
+                                    <div class="text-muted text-uppercase fw-bold mb-1">Target Facility:</div>
+                                    <div class="text-light fw-bold" id="report-building-name">--</div>
+                                    <div class="text-muted mt-2">Level: Ground Operations (Floor 1) | Area: 1,450 sq.m</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-3 bg-dark rounded border border-secondary small">
+                                    <div class="text-muted text-uppercase fw-bold mb-1">Simulated Emergency Scenario:</div>
+                                    <div class="text-warning fw-bold" id="report-scenario-name">--</div>
+                                    <div class="text-muted mt-2">Simulation Engine: Dijkstra Pathfinding + Flow Dynamics</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- KPI Summary Grid -->
+                        <div class="row g-2 mb-4">
+                            <div class="col text-center p-2 bg-dark rounded border border-secondary">
+                                <div class="text-muted small">Total Time</div>
+                                <div id="report-stat-time" class="fw-bold fs-5 text-warning">--</div>
+                            </div>
+                            <div class="col text-center p-2 bg-dark rounded border border-secondary">
+                                <div class="text-muted small">Occupants</div>
+                                <div id="report-stat-occupants" class="fw-bold fs-5 text-light">--</div>
+                            </div>
+                            <div class="col text-center p-2 bg-dark rounded border border-secondary">
+                                <div class="text-muted small">Safely Evacuated</div>
+                                <div id="report-stat-evacuated" class="fw-bold fs-5 text-success">--</div>
+                            </div>
+                            <div class="col text-center p-2 bg-dark rounded border border-secondary">
+                                <div class="text-muted small">Trapped</div>
+                                <div id="report-stat-trapped" class="fw-bold fs-5 text-danger">--</div>
+                            </div>
+                            <div class="col text-center p-2 bg-dark rounded border border-secondary">
+                                <div class="text-muted small">Risk Index</div>
+                                <div id="report-stat-risk" class="fw-bold fs-5 text-info">--</div>
+                            </div>
+                        </div>
+
+                        <!-- Executive Summary -->
+                        <h6 class="text-white fw-bold mb-2">Executive Summary</h6>
+                        <p id="report-executive-summary" class="text-secondary small mb-4 p-3 bg-dark rounded border border-secondary">--</p>
+
+                        <!-- Blocked Passages Breakdown -->
+                        <h6 class="text-white fw-bold mb-2">Hazard Blockages in Scenario</h6>
+                        <div id="report-blocked-passages" class="mb-4"></div>
+
+                        <!-- Evacuation Route Details Table -->
+                        <h6 class="text-white fw-bold mb-2">Room Evacuation Route Trajectories</h6>
+                        <div class="table-responsive mb-4">
+                            <table class="table-tactical">
+                                <thead>
+                                    <tr>
+                                        <th>Room</th>
+                                        <th>Room Name</th>
+                                        <th>Occupants</th>
+                                        <th>Assigned Exit</th>
+                                        <th>Navigated Path</th>
+                                        <th>Distance</th>
+                                        <th>Clearance Time</th>
+                                        <th>Risk</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="report-routes-tbody"></tbody>
+                            </table>
+                        </div>
+
+                        <!-- Strategic Recommendations -->
+                        <h6 class="text-white fw-bold mb-2">Strategic Safety Recommendations</h6>
+                        <ul id="report-recommendations" class="list-group list-group-flush mb-4"></ul>
+
+                        <!-- Formal Disclaimer Footer -->
+                        <div class="disclaimer-banner mt-4">
+                            <i class="bi bi-shield-exclamation"></i>
+                            <div class="small">
+                                <strong>DISCLAIMER:</strong> This audit report is generated by an educational simulation algorithm.
+                                Evacuation numbers, paths, and flow constraints are mathematical heuristics and are not certified for real-world life safety directives or building regulatory approvals.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Create Custom Scenario Modal -->
+    <div class="modal fade" id="createScenarioModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content bg-dark text-light border-secondary">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-sliders text-cyan me-2"></i>Create Custom Scenario</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="createScenarioForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label small fw-medium text-secondary">Scenario Name:</label>
+                            <input type="text" id="new-scenario-name" class="form-control bg-black text-light border-secondary" required placeholder="e.g. West Wing Electrical Hazard">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-medium text-secondary">Description:</label>
+                            <textarea id="new-scenario-desc" class="form-control bg-black text-light border-secondary" rows="2" placeholder="Describe the hazard scenario and affected areas..."></textarea>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-4">
+                                <label class="form-label small text-secondary">Walking Speed (m/s):</label>
+                                <input type="number" id="new-scenario-speed" class="form-control bg-black text-light border-secondary" step="0.1" min="0.5" max="2.5" value="1.2">
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label small text-secondary">Density Multiplier:</label>
+                                <input type="number" id="new-scenario-density" class="form-control bg-black text-light border-secondary" step="0.1" min="0.5" max="3.0" value="1.0">
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label small text-secondary">Reaction Delay (s):</label>
+                                <input type="number" id="new-scenario-delay" class="form-control bg-black text-light border-secondary" step="1" min="0" max="60" value="5">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-secondary">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create & Activate</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Application Modules -->
+    <script src="js/api.js"></script>
+    <script src="js/floorplan.js"></script>
+    <script src="js/simulation.js"></script>
+    <script src="js/risk.js"></script>
+    <script src="js/comparison.js"></script>
+    <script src="js/report.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
